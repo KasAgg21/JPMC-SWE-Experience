@@ -1,0 +1,130 @@
+Subject: [PATCH] Changed
+---
+Index: src/Graph.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+--- a/src/Graph.tsx	(revision 988093e37b2ec7e0215609bce5445569a1a33612)
++++ b/src/Graph.tsx	(date 1686654486906)
+@@ -11,9 +11,11 @@
+ interface PerspectiveViewerElement extends HTMLElement {
+   load: (table: Table) => void,
+ }
+-class Graph extends Component<IProps, {}> {
++class Graph extends Component<IProps, {}>
++ {
+   table: Table | undefined;
+ 
++
+   render() {
+     return React.createElement('perspective-viewer');
+   }
+@@ -23,9 +25,12 @@
+     const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+-      stock: 'string',
+-      top_ask_price: 'float',
+-      top_bid_price: 'float',
++      price_abc: 'float',
++      price_def:'float',
++      ratio:'float',
++      trigger_alert: 'float',
++      upp_bound: 'float',
++      low_bound: 'float',
+       timestamp: 'date',
+     };
+ 
+@@ -36,25 +41,27 @@
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+       elem.load(this.table);
+       elem.setAttribute('view', 'y_line');
+-      elem.setAttribute('column-pivots', '["stock"]');
+       elem.setAttribute('row-pivots', '["timestamp"]');
+-      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('columns', '["ratio","low_bound","upp_bound","trigger_alert"]');
+       elem.setAttribute('aggregates', JSON.stringify({
+-        stock: 'distinctcount',
+-        top_ask_price: 'avg',
+-        top_bid_price: 'avg',
+-        timestamp: 'distinct count',
++        price_abc: 'avg',
++        price_def:'avg',
++        ratio:'avg',
++                timestamp: 'distinct count',
++        trigger_alert: 'avg',
++        upp_bound: 'avg',
++        low_bound: 'avg',
++
+       }));
+     }
+   }
+ 
+   componentDidUpdate() {
+     if (this.table) {
+-      this.table.update(
+-        DataManipulator.generateRow(this.props.data),
+-      );
++      this.table.update([DataManipulator.generateRow(this.props.data),] as unknown as TableData);
+     }
+   }
+-}
++ }
++
+ 
+ export default Graph;
+Index: src/DataManipulator.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/DataManipulator.ts b/src/DataManipulator.ts
+--- a/src/DataManipulator.ts	(revision 988093e37b2ec7e0215609bce5445569a1a33612)
++++ b/src/DataManipulator.ts	(date 1686653730950)
+@@ -1,20 +1,33 @@
+ import { ServerRespond } from './DataStreamer';
+ 
+ export interface Row {
+-  stock: string,
+-  top_ask_price: number,
++
++  price_abc: number
++  price_def:number
++  ratio: number
++  trigger_alert: number | undefined ,
++  upp_bound: number,
++  low_bound: number,
+   timestamp: Date,
+ }
+ 
+ 
+ export class DataManipulator {
+-  static generateRow(serverResponds: ServerRespond[]) {
+-    return serverResponds.map((el: any) => {
+-      return {
+-        stock: el.stock,
+-        top_ask_price: el.top_ask && el.top_ask.price || 0,
+-        timestamp: el.timestamp,
++  static generateRow(serverResponds: ServerRespond[]): Row {
++    const priceABC = (serverResponds[0].top_ask.price + serverResponds[0].top_bid.price)/2;
++    const priceDEF = (serverResponds[1].top_ask.price + serverResponds[1].top_bid.price)/2;
++    const ratio = priceABC / priceDEF;
++    const up_bound = 1 + 0.01;
++    const lw_bound = 1 - 0.01;
++    return {
++      price_abc: priceABC,
++      price_def: priceDEF,
++      ratio,
++      timestamp: serverResponds[0].timestamp > serverResponds[1].timestamp ? serverResponds[0].timestamp : serverResponds[1].timestamp,
++      upp_bound: up_bound,
++      low_bound: lw_bound,
++      trigger_alert: (ratio > up_bound || ratio < lw_bound ) ? ratio : undefined,
++
+       };
+-    })
+   }
+-}
++}
+\ No newline at end of file
