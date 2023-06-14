@@ -1,2 +1,2 @@
-# JPMC Task 1
-Starter repo for task 1 of the JPMC software engineering program
+# JPMC Virtual Software Engineer Experience
+Repo for tasks of the JPMC software engineering program
